@@ -1,36 +1,106 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Zerodha Automated Options Trader
 
-## Getting Started
+Production-oriented Next.js full-stack trading system for intraday NIFTY/SENSEX option structures with Zerodha Kite APIs.
 
-First, run the development server:
+## Features
+
+- Zerodha OAuth flow (`/api/auth/login-url`, callback token exchange)
+- Instrument refresh and option universe cache
+- Strategy scheduler with entry windows:
+  - 09:20-09:25
+  - 09:25-09:30
+- NIFTY and SENSEX target premium strike selection
+- 50% per-short-leg SL and opposite-leg move-to-cost adjustment
+- Hard exit route at 15:15
+- Risk snapshots and daily max-loss lock
+- Dashboard, positions, orders, risk, logs pages
+- SSE endpoint + polling-friendly frontend
+- Vercel cron-ready config
+
+## Tech Stack
+
+- Next.js App Router + TypeScript
+- Tailwind CSS
+- Zustand + TanStack React Query
+- Prisma + PostgreSQL
+- Upstash Redis
+- Recharts
+
+## Setup
+
+1) Install dependencies
+
+```bash
+npm install
+```
+
+2) Configure env
+
+```bash
+cp .env.example .env
+```
+
+Fill all required values in `.env`.
+
+3) Generate Prisma client and migrate
+
+```bash
+npm run prisma:generate
+npm run prisma:migrate
+```
+
+4) Run app
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Core Endpoints
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Auth:
+  - `GET /api/auth/login-url`
+  - `GET /api/auth/callback`
+  - `GET /api/auth/status`
+  - `POST /api/auth/logout`
+- Strategy:
+  - `POST /api/strategy/start`
+  - `POST /api/strategy/stop`
+  - `GET /api/strategy/state`
+  - `POST /api/strategy/run-entry`
+  - `POST /api/strategy/run-risk-check`
+  - `POST /api/strategy/run-exit`
+  - `POST /api/strategy/refresh-instruments`
+- Trading:
+  - `POST /api/trade/execute`
+  - `POST /api/trade/exit`
+- Monitoring:
+  - `GET /api/positions`
+  - `GET /api/orders`
+  - `GET /api/risk/summary`
+  - `GET /api/logs`
+  - `GET /api/stream`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Scheduler
 
-## Learn More
+Hobby Vercel plans do not allow high-frequency cron.  
+Use an external scheduler (GitHub Actions cron, cron-job.org, or your VPS cron) to call:
 
-To learn more about Next.js, take a look at the following resources:
+- `POST /api/strategy/run-entry`
+- `POST /api/strategy/run-risk-check`
+- `POST /api/strategy/run-exit`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Include one of:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `x-internal-cron-secret: <INTERNAL_CRON_SECRET>`
+- `Authorization: Bearer <INTERNAL_CRON_SECRET>`
 
-## Deploy on Vercel
+## Testing
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run test
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Notes
+
+- This code handles production engineering concerns but live trading still requires strong operational controls, broker policy checks, and compliance review.
+- Validate lot sizes, contract filters, and exchange timings before live use.

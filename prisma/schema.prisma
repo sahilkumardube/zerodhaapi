@@ -1,0 +1,172 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum IndexType {
+  NIFTY
+  SENSEX
+}
+
+enum TradeStatus {
+  PENDING
+  ACTIVE
+  EXITED
+  FAILED
+  CANCELLED
+}
+
+enum LegType {
+  SHORT_CE
+  SHORT_PE
+  LONG_CE
+  LONG_PE
+}
+
+enum PositionStatus {
+  OPEN
+  CLOSED
+  STOPPED
+  REJECTED
+}
+
+enum OrderSide {
+  BUY
+  SELL
+}
+
+enum OrderStatus {
+  PENDING
+  OPEN
+  COMPLETE
+  CANCELLED
+  REJECTED
+}
+
+enum StrategyStatus {
+  STOPPED
+  RUNNING
+  PAUSED
+  LOCKED
+}
+
+model Trade {
+  id             String      @id @default(cuid())
+  indexType      IndexType
+  symbol         String
+  batchNo        Int
+  entryTime      DateTime?
+  exitTime       DateTime?
+  status         TradeStatus @default(PENDING)
+  configSnapshot Json
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  positions Position[]
+  orders    Order[]
+}
+
+model Position {
+  id            String         @id @default(cuid())
+  tradeId       String
+  legType       LegType
+  symbol        String
+  strike        Float
+  expiry        DateTime
+  quantity      Int
+  entryPrice    Float?
+  ltp           Float?
+  slPrice       Float?
+  realizedPnl   Float          @default(0)
+  unrealizedPnl Float          @default(0)
+  status        PositionStatus @default(OPEN)
+  metadata      Json?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  trade  Trade   @relation(fields: [tradeId], references: [id], onDelete: Cascade)
+  orders Order[]
+}
+
+model Order {
+  id             String      @id @default(cuid())
+  brokerOrderId  String?     @unique
+  tradeId        String?
+  positionId     String?
+  side           OrderSide
+  orderType      String
+  quantity       Int
+  price          Float?
+  triggerPrice   Float?
+  status         OrderStatus  @default(PENDING)
+  retries        Int          @default(0)
+  requestPayload Json
+  responsePayload Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  trade    Trade?    @relation(fields: [tradeId], references: [id], onDelete: SetNull)
+  position Position? @relation(fields: [positionId], references: [id], onDelete: SetNull)
+}
+
+model StrategyRun {
+  id            String         @id @default(cuid())
+  dateKey       String         @unique
+  status        StrategyStatus @default(STOPPED)
+  niftyTrades   Int            @default(0)
+  sensexTrades  Int            @default(0)
+  riskLocked    Boolean        @default(false)
+  lockReason    String?
+  config        Json
+  startedAt     DateTime?
+  stoppedAt     DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model RiskSnapshot {
+  id             String   @id @default(cuid())
+  dateKey        String
+  totalRealized  Float    @default(0)
+  totalUnrealized Float   @default(0)
+  totalPnl       Float    @default(0)
+  maxLoss        Float
+  marginUsed     Float?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+}
+
+model SystemEvent {
+  id         String   @id @default(cuid())
+  level      String
+  source     String
+  message    String
+  payload    Json?
+  createdAt  DateTime @default(now())
+}
+
+model AuthToken {
+  id           String   @id @default(cuid())
+  broker       String
+  userId       String?
+  encryptedData String
+  expiresAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model InstrumentCache {
+  id         String   @id @default(cuid())
+  exchange   String
+  tradingsymbol String
+  token      String
+  data       Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([exchange, tradingsymbol])
+}
