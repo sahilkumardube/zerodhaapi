@@ -68,6 +68,9 @@ model Trade {
 
   positions Position[]
   orders    Order[]
+
+  @@index([indexType, createdAt])
+  @@index([status, createdAt])
 }
 
 model Position {
@@ -90,6 +93,10 @@ model Position {
 
   trade  Trade   @relation(fields: [tradeId], references: [id], onDelete: Cascade)
   orders Order[]
+
+  @@index([tradeId, status])
+  @@index([status, updatedAt])
+  @@index([createdAt])
 }
 
 model Order {
@@ -111,6 +118,10 @@ model Order {
 
   trade    Trade?    @relation(fields: [tradeId], references: [id], onDelete: SetNull)
   position Position? @relation(fields: [positionId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([status, createdAt])
+  @@index([tradeId])
 }
 
 model StrategyRun {
@@ -126,6 +137,8 @@ model StrategyRun {
   stoppedAt     DateTime?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+
+  @@index([status, updatedAt])
 }
 
 model RiskSnapshot {
@@ -138,6 +151,8 @@ model RiskSnapshot {
   marginUsed     Float?
   metadata       Json?
   createdAt      DateTime @default(now())
+
+  @@index([dateKey, createdAt])
 }
 
 model SystemEvent {
@@ -147,6 +162,9 @@ model SystemEvent {
   message    String
   payload    Json?
   createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([level, createdAt])
 }
 
 model AuthToken {

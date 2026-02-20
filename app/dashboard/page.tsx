@@ -1,21 +1,15 @@
 "use client";
 
+import { useMemo } from "react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
-import { usePositions, useRiskSummary, useStrategyState } from "@/hooks/use-trading-data";
+import { useDashboardSummary } from "@/hooks/use-trading-data";
 
 export default function DashboardPage() {
-  const { data: positions = [] } = usePositions();
-  const { data: risk } = useRiskSummary();
-  const { data: state } = useStrategyState();
-
-  const totalPnl = Number(risk?.latest?.totalPnl ?? 0);
-  const activeTrades = positions.filter((p: { status: string }) => p.status === "OPEN").length;
-  const chartData = positions.slice(0, 20).map((p: { symbol: string; unrealizedPnl: number }, idx: number) => ({
-    time: idx + 1,
-    pnl: p.unrealizedPnl ?? 0,
-    name: p.symbol,
-  }));
+  const { data } = useDashboardSummary();
+  const totalPnl = Number(data?.latestRisk?.totalPnl ?? 0);
+  const activeTrades = Number(data?.activeLegs ?? 0);
+  const chartData = useMemo(() => data?.chartData ?? [], [data?.chartData]);
 
   return (
     <div className="space-y-4">
@@ -31,13 +25,13 @@ export default function DashboardPage() {
         </Card>
         <Card>
           <CardTitle>Strategy Status</CardTitle>
-          <CardContent>{state?.status ?? "STOPPED"}</CardContent>
+          <CardContent>{data?.strategy?.status ?? "STOPPED"}</CardContent>
         </Card>
       </div>
 
-      <Card className="h-72">
+      <Card className="min-h-72">
         <CardTitle>PnL Trend</CardTitle>
-        <CardContent className="h-60">
+        <CardContent className="h-[280px] min-h-[280px]">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData}>
               <XAxis dataKey="time" stroke="#a1a1aa" />
